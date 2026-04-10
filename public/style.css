@@ -459,11 +459,10 @@ body {
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed !important;
   transform: none !important;
   box-shadow: none !important;
-  filter: grayscale(1);
 }
 
 .btn-eraser {
@@ -1109,9 +1108,8 @@ body {
 
 .btn-send-custom:disabled,
 .btn-secondary:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  filter: grayscale(1);
   box-shadow: none;
 }
 
