@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <!-- Animated background orbs -->
   <div class="bg-orbs">
@@ -20,10 +22,25 @@
     <p>画画让 AI 猜，或上传图片让 AI 描述</p>
   </div>
 
+  <!-- Model Selector -->
+  <div class="model-selector" id="modelSelector">
+    <div class="model-selector-label">🤖 AI 模型</div>
+    <div class="model-groups">
+      <div class="model-group">
+        <div class="model-group-title">Ollama 本地</div>
+        <div class="model-options" id="ollamaModels"></div>
+      </div>
+      <div class="model-group">
+        <div class="model-group-title">阿里云 Qwen</div>
+        <div class="model-options" id="cloudModels"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="game-container">
     <!-- Tab Switcher -->
     <div class="tab-switcher">
-      <button class="tab-btn active" data-tab="draw">🖌️ 画画猜猜</button>
+      <button class="tab-btn active" data-tab="draw">🖌️ 你画我猜</button>
       <button class="tab-btn" data-tab="upload">📷 图片识别</button>
     </div>
 
@@ -92,4 +109,5 @@
 
   <script src="script.js" defer></script>
 </body>
+
 </html>

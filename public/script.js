@@ -1,3 +1,48 @@
+// ========== Model Selection ==========
+let selectedModel = 'gemma3';
+
+async function loadModels() {
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    const ollamaContainer = document.getElementById('ollamaModels');
+    const cloudContainer = document.getElementById('cloudModels');
+
+    // Render Ollama models
+    data.ollama.forEach(model => {
+      const chip = document.createElement('button');
+      chip.className = `model-chip${model === data.default ? ' active' : ''}`;
+      chip.textContent = model;
+      chip.dataset.model = model;
+      chip.addEventListener('click', () => selectModel(model));
+      ollamaContainer.appendChild(chip);
+    });
+
+    // Render Cloud models
+    data.cloud.forEach(model => {
+      const chip = document.createElement('button');
+      chip.className = 'model-chip cloud';
+      chip.innerHTML = `${model}<span class="chip-badge">云端</span>`;
+      chip.dataset.model = model;
+      chip.addEventListener('click', () => selectModel(model));
+      cloudContainer.appendChild(chip);
+    });
+
+    selectedModel = data.default;
+  } catch (e) {
+    console.error('Failed to load models:', e);
+  }
+}
+
+function selectModel(model) {
+  selectedModel = model;
+  document.querySelectorAll('.model-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.model-chip[data-model="${model}"]`).classList.add('active');
+}
+
+loadModels();
+
+// ========== DOM References ==========
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const resultArea = document.getElementById('resultArea');
@@ -165,7 +210,7 @@ guessBtn.addEventListener('click', async () => {
   resultArea.className = 'result-area';
   resultArea.innerHTML = `
     <div class="loading-spinner"></div>
-    <div class="loading">AI 正在观察你的画作…</div>
+    <div class="loading">AI (${selectedModel}) 正在观察你的画作…</div>
   `;
   statusText.innerHTML = '<span class="status-dot loading"></span>思考中…';
 
@@ -174,7 +219,7 @@ guessBtn.addEventListener('click', async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gemma3',
+        model: selectedModel,
         prompt: '你画我猜游戏。请仔细观察这幅简笔画，猜测用户画的是什么。只回答一个最可能的中文词语或短句，不超过10个字。不要解释，直接给出答案。',
         images: [imageData],
         stream: false
@@ -182,7 +227,8 @@ guessBtn.addEventListener('click', async () => {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama 返回错误: ${response.status}`);
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.details || `API Error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -192,14 +238,14 @@ guessBtn.addEventListener('click', async () => {
     guessCountEl.textContent = guessCount;
 
     resultArea.className = 'result-area has-result';
-    resultArea.innerHTML = `<div class="label">AI 猜测结果</div><div class="guess">${guess}</div>`;
+    resultArea.innerHTML = `<div class="label">AI 猜测结果 (${selectedModel})</div><div class="guess">${guess}</div>`;
     statusText.innerHTML = '<span class="status-dot"></span>完成';
 
     // Add to history
     historySection.style.display = 'block';
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.textContent = `#${guessCount} ${guess}`;
+    item.textContent = `#${guessCount} [${selectedModel}] ${guess}`;
     historyList.prepend(item);
 
   } catch (error) {
@@ -322,7 +368,7 @@ async function describeImage() {
     <div class="label">AI 图片描述</div>
     <div style="text-align:center">
       <div class="loading-spinner"></div>
-      <div class="loading">AI 正在仔细观察这张图片…</div>
+      <div class="loading">AI (${selectedModel}) 正在仔细观察这张图片…</div>
     </div>
   `;
 
@@ -331,21 +377,24 @@ async function describeImage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gemma3',
+        model: selectedModel,
         prompt: '请用中文详细描述这张图片中的内容。包括：1. 图片中有什么主要物体或人物；2. 场景和环境；3. 颜色和氛围。请用自然流畅的中文描述，大约100-200字。',
         images: [uploadedImageBase64],
         stream: false
       })
     });
 
-    if (!response.ok) throw new Error(`Ollama 返回错误: ${response.status}`);
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.details || `API Error: ${response.status}`);
+    }
 
     const data = await response.json();
     const description = data.response.trim();
 
     descResult.className = 'desc-result has-result';
     descResult.innerHTML = `
-      <div class="label">AI 图片描述</div>
+      <div class="label">AI 图片描述 (${selectedModel})</div>
       <div class="desc-text">${description}</div>
     `;
   } catch (error) {

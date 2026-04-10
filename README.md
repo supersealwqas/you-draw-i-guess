@@ -1,12 +1,21 @@
 # 🎨 AI Vision Studio (你画我猜 · AI 版)
 
-这是一个基于 Web 技术和本地 AI (Ollama) 构建的高颜值交互式实验项目。不仅可以玩传统的“你画我猜”，还能利用 AI 的视觉能力识别并描述你上传的任何图片。
+这是一个基于 Web 技术构建的高颜值交互式 AI 视觉项目。支持多种 AI 模型（本地 Ollama + 阿里云 Qwen），不仅可以玩传统的"你画我猜"，还能利用 AI 的视觉能力识别并描述你上传的任何图片。
 
 ## 🚀 版本演进记录
 
-### v5.1 - 自动化提升 (当前版本)
+### v6.0 - 多模型支持 (当前版本)
+**更新时间**：2026-04-11
+- **多 AI 后端**：同时支持 Ollama 本地模型和阿里云 Qwen 云端模型。
+- **前端模型选择器**：用户可自由切换模型，支持的模型包括：
+    - **Ollama 本地**: `gemma3`、`qwen3`、`qwen2.5vl`
+    - **阿里云 Qwen**: `qwen-vl-max`、`qwen-vl-plus`
+- **安全性**：API 密钥通过 `.env` 文件管理，不会暴露到代码仓库。
+- **智能路由**：后端自动判断模型类型，将请求路由到对应的 AI 服务。
+
+### v5.1 - 自动化提升
 **更新时间**：2026-04-10
-- **自动 IP 识别**：后端 `server.js` 启动时会自动检测并显示局域网 IP，无需手动查询，真正实现“即开即连”。
+- **自动 IP 识别**：后端 `server.js` 启动时会自动检测并显示局域网 IP，无需手动查询，真正实现"即开即连"。
 
 ### v5.0 - 后端集成与跨设备访问
 **更新时间**：2026-04-10
@@ -48,25 +57,25 @@
 ## 🛠️ 环境配置及启动
 
 ### 1. 本地 AI 后端 (Ollama)
-本项目依赖 [Ollama](https://ollama.com/) 作为 AI 推理后端：
+本项目依赖 [Ollama](https://ollama.com/) 作为本地 AI 推理后端：
 1.  确保已安装 Ollama。
 2.  下载视觉模型：`ollama run gemma3`。
-3.  **注意**：有了 Node.js 后端，你**不再需要**配置系统的 `OLLAMA_ORIGINS` 环境变量。
 
-### 2. 启动项目 (Node.js)
+### 2. 阿里云 Qwen (可选)
+如需使用云端模型，需在项目根目录创建 `.env` 文件：
+```bash
+QWEN_API_KEY=你的阿里云API密钥
+QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+### 3. 启动项目
 1.  确保已安装 [Node.js](https://nodejs.org/)。
-2.  在项目根目录下安装依赖：
-    ```bash
-    npm install
-    ```
-3.  启动服务端：
-    ```bash
-    node server.js
-    ```
+2.  安装依赖：`npm install`
+3.  启动服务端：`node server.js`
 4.  在浏览器访问：`http://localhost:3000`。
 5.  **手机访问**：在同一局域网下，直接打开终端里显示的 `http://<IP>:3000` 链接即可。
 
 ## 📦 技术栈
 - **Frontend**: Vanilla HTML / CSS / Modern JavaScript
-- **Backend**: Node.js / Express / Axios
-- **AI Support**: Ollama API (Gemma 3)
+- **Backend**: Node.js / Express / Axios / dotenv
+- **AI Support**: Ollama (Gemma3, Qwen3, Qwen2.5VL) + 阿里云 Qwen API (qwen-vl-max, qwen-vl-plus)
