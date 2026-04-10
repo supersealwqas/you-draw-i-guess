@@ -3,9 +3,24 @@ const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
 
+const os = require('os');
+
 const app = express();
 const PORT = 3000;
 const OLLAMA_URL = 'http://localhost:11434/api/generate';
+
+// Helper function to get local IP
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost';
+}
 
 // Middleware
 app.use(cors());
@@ -52,8 +67,9 @@ app.post('/api/describe', async (req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 AI Vision Studio Backend running at:`);
-    console.log(`   - Local:   http://localhost:${PORT}`);
-    console.log(`   - Network: http://<YOUR_LAN_IP>:${PORT}`);
-    console.log(`\nOllama Backend Targeted at: ${OLLAMA_URL}`);
+    const localIP = getLocalIP();
+    console.log(`🚀 AI Vision Studio 后端已启动:`);
+    console.log(`   - 本地访问: http://localhost:${PORT}`);
+    console.log(`   - 手机/他人访问: http://${localIP}:${PORT}`);
+    console.log(`\nOllama 后端目标地址: ${OLLAMA_URL}`);
 });
