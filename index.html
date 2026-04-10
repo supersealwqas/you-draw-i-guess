@@ -3,153 +3,415 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>你画我猜小游戏</title>
+  <title>你画我猜 · AI Edition</title>
+  <meta name="description" content="用画笔描绘你的想象，让 AI 来猜猜你画了什么！">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-start: #0f0c29;
+      --bg-mid: #302b63;
+      --bg-end: #24243e;
+      --glass-bg: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+      --accent-1: #a78bfa;
+      --accent-2: #f472b6;
+      --accent-3: #38bdf8;
+      --text-primary: #f1f5f9;
+      --text-secondary: rgba(241, 245, 249, 0.6);
+      --radius: 16px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Noto Sans SC', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, var(--bg-start), var(--bg-mid), var(--bg-end));
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: 24px 16px;
+      overflow-x: hidden;
+      position: relative;
     }
 
-    h1 {
-      color: white;
-      font-size: 2.5rem;
-      margin-bottom: 20px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    /* ========== Animated Background ========== */
+    .bg-orbs {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-orbs span {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      animation: orbFloat 12s ease-in-out infinite alternate;
+    }
+    .bg-orbs span:nth-child(1) {
+      width: 400px; height: 400px;
+      background: var(--accent-1);
+      top: -10%; left: -5%;
+      animation-delay: 0s;
+    }
+    .bg-orbs span:nth-child(2) {
+      width: 350px; height: 350px;
+      background: var(--accent-2);
+      bottom: -10%; right: -5%;
+      animation-delay: -4s;
+    }
+    .bg-orbs span:nth-child(3) {
+      width: 300px; height: 300px;
+      background: var(--accent-3);
+      top: 40%; left: 50%;
+      animation-delay: -8s;
+    }
+    @keyframes orbFloat {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, -30px) scale(1.1); }
+      100% { transform: translate(-20px, 20px) scale(0.95); }
     }
 
+    /* ========== Header ========== */
+    .header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 2.8rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 2px;
+      animation: titleGlow 4s ease-in-out infinite alternate;
+    }
+    .header p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-top: 6px;
+    }
+    @keyframes titleGlow {
+      0% { filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.4)); }
+      100% { filter: drop-shadow(0 0 20px rgba(244, 114, 182, 0.5)); }
+    }
+
+    /* ========== Glass Card ========== */
     .game-container {
-      background: white;
-      border-radius: 16px;
+      position: relative;
+      z-index: 1;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow: var(--glass-shadow);
       padding: 24px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      max-width: 800px;
+      max-width: 820px;
       width: 100%;
+      animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes cardEnter {
+      from { opacity: 0; transform: translateY(30px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
+    /* ========== Canvas ========== */
+    .canvas-wrapper {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.15);
+    }
     #canvas {
-      border: 2px dashed #ccc;
-      border-radius: 8px;
-      cursor: crosshair;
       display: block;
       width: 100%;
-      background: white;
+      background: #ffffff;
+      cursor: crosshair;
       touch-action: none;
+      border-radius: 12px;
     }
 
+    /* ========== Toolbar ========== */
     .toolbar {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       margin-top: 16px;
-      padding: 12px;
-      background: #f8f9fa;
-      border-radius: 8px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+    }
+    .toolbar-divider {
+      width: 1px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 0 4px;
     }
 
+    /* Color Buttons */
     .color-btn {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      border: 2px solid #ddd;
+      border: 2.5px solid transparent;
       cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s;
+      transition: var(--transition);
+      position: relative;
     }
-    .color-btn:hover, .color-btn.active {
-      transform: scale(1.2);
-      border-color: #333;
+    .color-btn::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      transition: var(--transition);
+    }
+    .color-btn:hover {
+      transform: scale(1.15);
+    }
+    .color-btn.active::after {
+      border-color: var(--accent-1);
+    }
+    .color-btn.active {
+      transform: scale(1.15);
+      box-shadow: 0 0 12px rgba(167, 139, 250, 0.5);
     }
 
+    /* Size Slider */
     .size-slider {
       display: flex;
       align-items: center;
       gap: 8px;
+      color: var(--text-secondary);
+      font-size: 13px;
     }
-    .size-slider input { width: 100px; }
+    .size-slider input[type="range"] {
+      -webkit-appearance: none;
+      width: 90px;
+      height: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+    .size-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-1);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+      transition: var(--transition);
+    }
+    .size-slider input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    .size-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      background: rgba(167, 139, 250, 0.2);
+      border-radius: 6px;
+      color: var(--accent-1);
+      font-weight: 700;
+      font-size: 12px;
+    }
 
+    /* Buttons */
     .btn {
       padding: 8px 16px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
     }
-    .btn:hover { transform: translateY(-1px); }
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .btn:hover::before { opacity: 1; }
+    .btn:active {
+      transform: translateY(0) scale(0.97);
+    }
+
+    .btn-eraser {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent-3);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .btn-eraser.active {
+      background: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+    }
+    .btn-undo {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    .btn-clear {
+      background: rgba(248, 113, 113, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
 
     .btn-guess {
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
       color: white;
-      font-size: 16px;
-      padding: 12px 24px;
+      font-size: 15px;
+      padding: 10px 24px;
+      border: none;
+      box-shadow: 0 4px 20px rgba(167, 139, 250, 0.35);
+      margin-left: auto;
+    }
+    .btn-guess:hover {
+      box-shadow: 0 6px 28px rgba(167, 139, 250, 0.5);
     }
     .btn-guess:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
       transform: none;
+      box-shadow: none;
     }
+    .btn-guess:disabled:hover::before { opacity: 0; }
 
-    .btn-clear { background: #ff6b6b; color: white; }
-    .btn-undo { background: #ffd93d; color: #333; }
-    .btn-eraser { background: #a8e6cf; color: #333; }
-    .btn-eraser.active { outline: 2px solid #333; }
-
+    /* ========== Result Area ========== */
     .result-area {
       margin-top: 20px;
-      padding: 20px;
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      border-radius: 12px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
       text-align: center;
-      min-height: 80px;
+      min-height: 90px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      transition: var(--transition);
+    }
+    .result-area.has-result {
+      background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(244, 114, 182, 0.15));
+      border-color: rgba(167, 139, 250, 0.25);
+    }
+    .result-area.has-error {
+      background: linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(251, 146, 60, 0.12));
+      border-color: rgba(248, 113, 113, 0.25);
     }
 
     .result-area .label {
-      color: rgba(255,255,255,0.8);
-      font-size: 14px;
+      color: var(--text-secondary);
+      font-size: 13px;
       margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
     }
-
     .result-area .guess {
-      color: white;
-      font-size: 28px;
-      font-weight: bold;
+      font-size: 1.8rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: resultPop 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes resultPop {
+      0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
     }
 
     .result-area .loading {
-      color: white;
-      font-size: 18px;
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(167, 139, 250, 0.2);
+      border-top-color: var(--accent-1);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    .loading-dots::after {
-      content: '';
-      animation: dots 1.5s steps(4, end) infinite;
+    /* ========== Stats ========== */
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
     }
-    @keyframes dots {
-      0%, 20% { content: ''; }
-      40% { content: '.'; }
-      60% { content: '..'; }
-      80%, 100% { content: '...'; }
+    .stats strong {
+      color: var(--accent-1);
+      font-weight: 700;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      margin-right: 6px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .status-dot.loading { background: #fbbf24; }
+    .status-dot.error { background: #f87171; animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
+    /* ========== History ========== */
     .history {
-      margin-top: 20px;
+      margin-top: 16px;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .history h3 {
-      font-size: 16px;
-      color: #333;
-      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
     }
     .history-list {
       display: flex;
@@ -157,64 +419,123 @@
       gap: 8px;
     }
     .history-item {
-      background: #e9ecef;
-      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      animation: chipPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: var(--transition);
+    }
+    .history-item:hover {
+      background: rgba(167, 139, 250, 0.15);
+      border-color: rgba(167, 139, 250, 0.3);
+    }
+    @keyframes chipPop {
+      0% { opacity: 0; transform: scale(0.7); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
-    .stats {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 12px;
-      padding: 8px 12px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      font-size: 14px;
-      color: #666;
-    }
-
-    @media (max-width: 600px) {
-      h1 { font-size: 1.8rem; }
-      .toolbar { gap: 8px; }
+    /* ========== Responsive ========== */
+    @media (max-width: 640px) {
+      .header h1 { font-size: 2rem; }
+      .game-container { padding: 16px; }
+      .toolbar { gap: 8px; padding: 10px; }
       .btn { padding: 6px 12px; font-size: 12px; }
-      .btn-guess { font-size: 14px; }
+      .btn-guess { font-size: 13px; padding: 8px 18px; }
+      .result-area .guess { font-size: 1.4rem; }
+      .toolbar-divider { display: none; }
+    }
+
+    /* ========== Ripple Effect ========== */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transform: scale(0);
+      animation: rippleAnim 0.6s ease-out;
+      pointer-events: none;
+    }
+    @keyframes rippleAnim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* ========== Tooltip ========== */
+    [data-tip] {
+      position: relative;
+    }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      background: rgba(15, 12, 41, 0.9);
+      color: var(--text-primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: var(--transition);
+    }
+    [data-tip]:hover::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
   </style>
 </head>
 <body>
-  <h1>🎨 你画我猜</h1>
+  <!-- Animated background orbs -->
+  <div class="bg-orbs">
+    <span></span><span></span><span></span>
+  </div>
+
+  <div class="header">
+    <h1>🎨 你画我猜</h1>
+    <p>画一幅画，让 AI 猜猜你画了什么</p>
+  </div>
 
   <div class="game-container">
-    <canvas id="canvas" width="752" height="450"></canvas>
+    <div class="canvas-wrapper">
+      <canvas id="canvas" width="770" height="450"></canvas>
+    </div>
 
     <div class="toolbar">
-      <div class="color-btn active" style="background: #000" data-color="#000000"></div>
-      <div class="color-btn" style="background: #e74c3c" data-color="#e74c3c"></div>
-      <div class="color-btn" style="background: #3498db" data-color="#3498db"></div>
-      <div class="color-btn" style="background: #2ecc71" data-color="#2ecc71"></div>
-      <div class="color-btn" style="background: #f39c12" data-color="#f39c12"></div>
+      <div class="color-btn active" style="background:#1e1e1e" data-color="#1e1e1e" data-tip="黑色"></div>
+      <div class="color-btn" style="background:#ef4444" data-color="#ef4444" data-tip="红色"></div>
+      <div class="color-btn" style="background:#3b82f6" data-color="#3b82f6" data-tip="蓝色"></div>
+      <div class="color-btn" style="background:#22c55e" data-color="#22c55e" data-tip="绿色"></div>
+      <div class="color-btn" style="background:#f59e0b" data-color="#f59e0b" data-tip="橙色"></div>
+      <div class="color-btn" style="background:#a855f7" data-color="#a855f7" data-tip="紫色"></div>
+
+      <div class="toolbar-divider"></div>
 
       <div class="size-slider">
-        <span>粗细:</span>
+        <span>粗细</span>
         <input type="range" id="sizeSlider" min="1" max="20" value="3">
-        <span id="sizeValue">3</span>
+        <span class="size-value" id="sizeValue">3</span>
       </div>
 
-      <button class="btn btn-eraser" id="eraserBtn">橡皮擦</button>
-      <button class="btn btn-undo" id="undoBtn">撤销</button>
-      <button class="btn btn-clear" id="clearBtn">清空</button>
-      <button class="btn btn-guess" id="guessBtn">发送猜测</button>
+      <div class="toolbar-divider"></div>
+
+      <button class="btn btn-eraser" id="eraserBtn" data-tip="橡皮擦">🧹 橡皮</button>
+      <button class="btn btn-undo" id="undoBtn" data-tip="撤销上一步">↩ 撤销</button>
+      <button class="btn btn-clear" id="clearBtn" data-tip="清空画布">🗑 清空</button>
+
+      <button class="btn btn-guess" id="guessBtn">✨ 让 AI 猜</button>
     </div>
 
     <div class="result-area" id="resultArea">
       <div class="label">AI 猜测结果</div>
-      <div class="guess">画一幅画，点击"发送猜测"</div>
+      <div class="guess">画一幅画，点击「让 AI 猜」</div>
     </div>
 
     <div class="stats">
       <span>猜测次数: <strong id="guessCount">0</strong></span>
-      <span id="statusText">就绪</span>
+      <span id="statusText"><span class="status-dot"></span>就绪</span>
     </div>
 
     <div class="history" id="historySection" style="display: none;">
@@ -232,32 +553,29 @@
     const undoBtn = document.getElementById('undoBtn');
     const eraserBtn = document.getElementById('eraserBtn');
     const sizeSlider = document.getElementById('sizeSlider');
-    const sizeValue = document.getElementById('sizeValue');
+    const sizeValueEl = document.getElementById('sizeValue');
     const guessCountEl = document.getElementById('guessCount');
     const statusText = document.getElementById('statusText');
     const historySection = document.getElementById('historySection');
     const historyList = document.getElementById('historyList');
 
     let isDrawing = false;
-    let currentColor = '#000000';
+    let currentColor = '#1e1e1e';
     let brushSize = 3;
     let isEraser = false;
     let guessCount = 0;
-    let history = [];
+    let undoStack = [];
 
-    // Initialize canvas background as white
+    // Initialize canvas
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Save initial state
     saveState();
 
-    // Drawing functions
+    // ========== Drawing ==========
     function getPos(e) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
-
       if (e.touches) {
         return {
           x: (e.touches[0].clientX - rect.left) * scaleX,
@@ -276,21 +594,28 @@
       const pos = getPos(e);
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
+      // Draw a dot for single clicks
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = isEraser ? 'white' : currentColor;
+      ctx.lineTo(pos.x + 0.1, pos.y + 0.1);
+      ctx.stroke();
     }
 
     function draw(e) {
       if (!isDrawing) return;
       e.preventDefault();
       const pos = getPos(e);
-
       ctx.lineWidth = brushSize;
       ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.strokeStyle = isEraser ? 'white' : currentColor;
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
     }
 
-    function endDraw(e) {
+    function endDraw() {
       if (isDrawing) {
         isDrawing = false;
         saveState();
@@ -298,21 +623,22 @@
     }
 
     function saveState() {
-      history.push(canvas.toDataURL());
-      if (history.length > 30) history.shift();
+      undoStack.push(canvas.toDataURL());
+      if (undoStack.length > 30) undoStack.shift();
     }
 
-    // Event listeners
+    // Mouse events
     canvas.addEventListener('mousedown', startDraw);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', endDraw);
     canvas.addEventListener('mouseout', endDraw);
 
+    // Touch events
     canvas.addEventListener('touchstart', startDraw, { passive: false });
     canvas.addEventListener('touchmove', draw, { passive: false });
     canvas.addEventListener('touchend', endDraw);
 
-    // Color buttons
+    // ========== Color Buttons ==========
     document.querySelectorAll('.color-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -323,48 +649,72 @@
       });
     });
 
-    // Size slider
+    // ========== Size Slider ==========
     sizeSlider.addEventListener('input', () => {
       brushSize = parseInt(sizeSlider.value);
-      sizeValue.textContent = brushSize;
+      sizeValueEl.textContent = brushSize;
     });
 
-    // Eraser
+    // ========== Eraser ==========
     eraserBtn.addEventListener('click', () => {
       isEraser = !isEraser;
       eraserBtn.classList.toggle('active');
+      if (isEraser) {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+      } else {
+        // Re-activate the current color button
+        document.querySelectorAll('.color-btn').forEach(b => {
+          if (b.dataset.color === currentColor) b.classList.add('active');
+        });
+      }
     });
 
-    // Undo
+    // ========== Undo ==========
     undoBtn.addEventListener('click', () => {
-      if (history.length > 1) {
-        history.pop();
+      if (undoStack.length > 1) {
+        undoStack.pop();
         const img = new Image();
         img.onload = () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
         };
-        img.src = history[history.length - 1];
+        img.src = undoStack[undoStack.length - 1];
       }
     });
 
-    // Clear
+    // ========== Clear ==========
     clearBtn.addEventListener('click', () => {
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       saveState();
     });
 
-    // Send guess
+    // ========== Ripple Effect ==========
+    document.querySelectorAll('.btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        const ripple = document.createElement('span');
+        ripple.classList.add('ripple');
+        const rect = this.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+        ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+        this.appendChild(ripple);
+        ripple.addEventListener('animationend', () => ripple.remove());
+      });
+    });
+
+    // ========== AI Guess ==========
     guessBtn.addEventListener('click', async () => {
       const imageData = canvas.toDataURL('image/png').split(',')[1];
 
       guessBtn.disabled = true;
+      resultArea.className = 'result-area';
       resultArea.innerHTML = `
-        <div class="label">AI 正在思考</div>
-        <div class="loading loading-dots"></div>
+        <div class="loading-spinner"></div>
+        <div class="loading">AI 正在观察你的画作…</div>
       `;
-      statusText.textContent = '发送中...';
+      statusText.innerHTML = '<span class="status-dot loading"></span>思考中…';
 
       try {
         const response = await fetch('http://localhost:11434/api/generate', {
@@ -388,24 +738,34 @@
         guessCount++;
         guessCountEl.textContent = guessCount;
 
+        resultArea.className = 'result-area has-result';
         resultArea.innerHTML = `<div class="label">AI 猜测结果</div><div class="guess">${guess}</div>`;
-        statusText.textContent = '完成';
+        statusText.innerHTML = '<span class="status-dot"></span>完成';
 
         // Add to history
         historySection.style.display = 'block';
         const item = document.createElement('div');
         item.className = 'history-item';
-        item.textContent = guess;
+        item.textContent = `#${guessCount} ${guess}`;
         historyList.prepend(item);
 
       } catch (error) {
+        resultArea.className = 'result-area has-error';
         resultArea.innerHTML = `
           <div class="label">出错了</div>
-          <div class="guess" style="font-size: 16px;">${error.message}</div>
+          <div class="guess" style="font-size: 14px; -webkit-text-fill-color: #f87171;">${error.message}</div>
         `;
-        statusText.textContent = '错误';
+        statusText.innerHTML = '<span class="status-dot error"></span>错误';
       } finally {
         guessBtn.disabled = false;
+      }
+    });
+
+    // ========== Keyboard Shortcuts ==========
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        undoBtn.click();
       }
     });
   </script>
