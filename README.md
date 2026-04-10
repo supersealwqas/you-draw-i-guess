@@ -4,7 +4,13 @@
 
 ## 🚀 版本演进记录
 
-### v4.0 - 工程化重构 (当前版本)
+### v5.0 - 后端集成与跨设备访问 (当前版本)
+**更新时间**：2026-04-10
+- **引入 Node.js 后端**：使用 Express 搭建中转服务器，彻底解决浏览器跨域 (CORS) 限制。
+- **跨设备支持**：其他局域网设备（如手机）现在可以直接访问电脑 IP 来使用 AI 功能，不再受 `localhost` 限制。
+- **项目重构**：将前端资源整理至 `public/` 文件夹，后端逻辑位于 `server.js`，更加规范。
+
+### v4.0 - 工程化重构
 **更新时间**：2026-04-10
 - **代码组织**：将原本臃肿的单一 `index.html` 拆分为 `index.html` (结构)、`style.css` (样式) 和 `script.js` (逻辑)。
 - **规范性**：提升了代码的可维护性和模块化程度，符合专业 Web 工程实践。
@@ -42,17 +48,22 @@
 本项目依赖 [Ollama](https://ollama.com/) 作为 AI 推理后端：
 1.  确保已安装 Ollama。
 2.  下载视觉模型：`ollama run gemma3`。
-3.  **跨域配置 (重要)**：
-    由于安全策略，需设置环境变量以允许本地网页访问。
-    - Windows: 在系统环境变量中设置 `OLLAMA_ORIGINS` 为 `*`。
-    - 重启 Ollama 以生效。
+3.  **注意**：有了 Node.js 后端，你**不再需要**配置系统的 `OLLAMA_ORIGINS` 环境变量。
 
-### 2. 启动网页
-本项目为纯前端项目，但由于 CORS 限制，建议使用本地服务器启动：
-- **方案 A**: 使用 VS Code **Live Server** 插件点击 "Go Live"。
-- **方案 B**: 在终端运行 `npx serve .` 或 `python -m http.server 8080`。
+### 2. 启动项目 (Node.js)
+1.  确保已安装 [Node.js](https://nodejs.org/)。
+2.  在项目根目录下安装依赖：
+    ```bash
+    npm install
+    ```
+3.  启动服务端：
+    ```bash
+    node server.js
+    ```
+4.  在浏览器访问：`http://localhost:3000`。
+5.  **手机访问**：在同一局域网下，访问 `http://<计算机IP>:3000` 即可（IP 会在服务端启动时显示在终端）。
 
 ## 📦 技术栈
 - **Frontend**: Vanilla HTML / CSS / Modern JavaScript
-- **Styling**: Vanilla CSS (Global Tokens, Flexbox, Animations)
+- **Backend**: Node.js / Express / Axios
 - **AI Support**: Ollama API (Gemma 3)
