@@ -8,8 +8,8 @@
 **更新时间**：2026-04-11
 - **多 AI 后端**：同时支持 Ollama 本地模型和阿里云 Qwen 云端模型。
 - **前端模型选择器**：用户可自由切换模型，支持的模型包括：
-    - **Ollama 本地**: `gemma3`、`qwen3`、`qwen2.5vl`
-    - **阿里云 Qwen**: `qwen-vl-max`、`qwen-vl-plus`
+    - **Ollama 本地**: `gemma3`、`qwen3.5`、`qwen3`
+    - **阿里云 Qwen**: `qwen3.5-flash`、`qwen3.5-plus`
 - **安全性**：API 密钥通过 `.env` 文件管理，不会暴露到代码仓库。
 - **智能路由**：后端自动判断模型类型，将请求路由到对应的 AI 服务。
 
@@ -78,4 +78,4 @@ QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 ## 📦 技术栈
 - **Frontend**: Vanilla HTML / CSS / Modern JavaScript
 - **Backend**: Node.js / Express / Axios / dotenv
-- **AI Support**: Ollama (Gemma3, Qwen3, Qwen2.5VL) + 阿里云 Qwen API (qwen-vl-max, qwen-vl-plus)
+- **AI Support**: Ollama (gemma3, qwen3.5, qwen3) + 阿里云 Qwen API (qwen3.5-flash, qwen3.5-plus)

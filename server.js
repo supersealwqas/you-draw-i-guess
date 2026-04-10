@@ -12,9 +12,9 @@ const QWEN_API_KEY = process.env.QWEN_API_KEY;
 const QWEN_BASE_URL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
 // Ollama models list
-const OLLAMA_MODELS = ['gemma3', 'qwen3', 'qwen2.5vl'];
+const OLLAMA_MODELS = ['gemma3', 'qwen3.5', 'qwen3'];
 // Qwen cloud models list
-const QWEN_MODELS = ['qwen-vl-max', 'qwen-vl-plus'];
+const QWEN_MODELS = ['qwen3.5-flash', 'qwen3.5-plus'];
 
 // Helper: get local IP
 function getLocalIP() {
