@@ -11,10 +11,20 @@ const OLLAMA_URL = 'http://localhost:11434/api/generate';
 const QWEN_API_KEY = process.env.QWEN_API_KEY;
 const QWEN_BASE_URL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
-// Ollama models list
-const OLLAMA_MODELS = ['gemma3', 'qwen3.5', 'qwen3'];
-// Qwen cloud models list
-const QWEN_MODELS = ['qwen3.5-flash', 'qwen3.5-plus'];
+// Backend model configuration with display names
+const MODELS_CONFIG = {
+    ollama: [
+        { id: 'gemma3', name: 'Gemma 3 (本地)' },
+        { id: 'qwen3.5', name: '千问 3.5 (本地)' }
+    ],
+    cloud: [
+        { id: 'qwen3.5-flash', name: '千问 3.5 极速版' },
+        { id: 'qwen3.5-plus', name: '千问 3.5 Plus 版' }
+    ]
+};
+
+// Flatten IDs for easier lookup
+const CLOUD_MODEL_IDS = MODELS_CONFIG.cloud.map(m => m.id);
 
 // Helper: get local IP
 function getLocalIP() {
@@ -30,8 +40,8 @@ function getLocalIP() {
 }
 
 // Helper: determine if model is cloud-based
-function isCloudModel(model) {
-    return QWEN_MODELS.includes(model);
+function isCloudModel(modelId) {
+    return CLOUD_MODEL_IDS.includes(modelId);
 }
 
 // Middleware
@@ -42,8 +52,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ========== API: List available models ==========
 app.get('/api/models', (req, res) => {
     res.json({
-        ollama: OLLAMA_MODELS,
-        cloud: QWEN_MODELS,
+        ollama: MODELS_CONFIG.ollama,
+        cloud: MODELS_CONFIG.cloud,
         default: 'gemma3'
     });
 });
@@ -112,8 +122,8 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 AI Vision Studio 后端已启动:`);
     console.log(`   - 本地访问: http://localhost:${PORT}`);
     console.log(`   - 手机/他人访问: http://${localIP}:${PORT}`);
-    console.log(`\n📦 可用模型:`);
-    console.log(`   - Ollama 本地: ${OLLAMA_MODELS.join(', ')}`);
-    console.log(`   - 阿里云 Qwen: ${QWEN_MODELS.join(', ')}`);
+    console.log(`\n📦 已加载模型映射:`);
+    MODELS_CONFIG.ollama.forEach(m => console.log(`   - [本地] ${m.name} -> ID: ${m.id}`));
+    MODELS_CONFIG.cloud.forEach(m => console.log(`   - [云端] ${m.name} -> ID: ${m.id}`));
     console.log(`   - Qwen API Key: ${QWEN_API_KEY ? '✅ 已配置' : '❌ 未配置'}`);
 });

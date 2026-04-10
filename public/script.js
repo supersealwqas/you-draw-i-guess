@@ -1,5 +1,6 @@
 // ========== Model Selection ==========
-let selectedModel = 'gemma3';
+let selectedModelId = 'gemma3';
+let modelsMap = {}; // To store id -> name mapping for display
 
 async function loadModels() {
   try {
@@ -8,13 +9,18 @@ async function loadModels() {
     const ollamaContainer = document.getElementById('ollamaModels');
     const cloudContainer = document.getElementById('cloudModels');
 
+    // Build the mapping for display purposes
+    [...data.ollama, ...data.cloud].forEach(m => {
+      modelsMap[m.id] = m.name;
+    });
+
     // Render Ollama models
     data.ollama.forEach(model => {
       const chip = document.createElement('button');
-      chip.className = `model-chip${model === data.default ? ' active' : ''}`;
-      chip.textContent = model;
-      chip.dataset.model = model;
-      chip.addEventListener('click', () => selectModel(model));
+      chip.className = `model-chip${model.id === data.default ? ' active' : ''}`;
+      chip.textContent = model.name;
+      chip.dataset.model = model.id;
+      chip.addEventListener('click', () => selectModel(model.id));
       ollamaContainer.appendChild(chip);
     });
 
@@ -22,22 +28,23 @@ async function loadModels() {
     data.cloud.forEach(model => {
       const chip = document.createElement('button');
       chip.className = 'model-chip cloud';
-      chip.innerHTML = `${model}<span class="chip-badge">云端</span>`;
-      chip.dataset.model = model;
-      chip.addEventListener('click', () => selectModel(model));
+      chip.innerHTML = `${model.name}<span class="chip-badge">云端</span>`;
+      chip.dataset.model = model.id;
+      chip.addEventListener('click', () => selectModel(model.id));
       cloudContainer.appendChild(chip);
     });
 
-    selectedModel = data.default;
+    selectedModelId = data.default;
   } catch (e) {
     console.error('Failed to load models:', e);
   }
 }
 
-function selectModel(model) {
-  selectedModel = model;
+function selectModel(modelId) {
+  selectedModelId = modelId;
   document.querySelectorAll('.model-chip').forEach(c => c.classList.remove('active'));
-  document.querySelector(`.model-chip[data-model="${model}"]`).classList.add('active');
+  const targetChip = document.querySelector(`.model-chip[data-model="${modelId}"]`);
+  if (targetChip) targetChip.classList.add('active');
 }
 
 loadModels();
@@ -210,7 +217,7 @@ guessBtn.addEventListener('click', async () => {
   resultArea.className = 'result-area';
   resultArea.innerHTML = `
     <div class="loading-spinner"></div>
-    <div class="loading">AI (${selectedModel}) 正在观察你的画作…</div>
+    <div class="loading">AI (${modelsMap[selectedModelId] || selectedModelId}) 正在观察你的画作…</div>
   `;
   statusText.innerHTML = '<span class="status-dot loading"></span>思考中…';
 
@@ -219,7 +226,7 @@ guessBtn.addEventListener('click', async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: selectedModel,
+        model: selectedModelId,
         prompt: '你画我猜游戏。请仔细观察这幅简笔画，猜测用户画的是什么。只回答一个最可能的中文词语或短句，不超过10个字。不要解释，直接给出答案。',
         images: [imageData],
         stream: false
@@ -238,14 +245,14 @@ guessBtn.addEventListener('click', async () => {
     guessCountEl.textContent = guessCount;
 
     resultArea.className = 'result-area has-result';
-    resultArea.innerHTML = `<div class="label">AI 猜测结果 (${selectedModel})</div><div class="guess">${guess}</div>`;
+    resultArea.innerHTML = `<div class="label">AI 猜测结果 (${modelsMap[selectedModelId] || selectedModelId})</div><div class="guess">${guess}</div>`;
     statusText.innerHTML = '<span class="status-dot"></span>完成';
 
     // Add to history
     historySection.style.display = 'block';
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.textContent = `#${guessCount} [${selectedModel}] ${guess}`;
+    item.textContent = `#${guessCount} [${modelsMap[selectedModelId] || selectedModelId}] ${guess}`;
     historyList.prepend(item);
 
   } catch (error) {
@@ -368,7 +375,7 @@ async function describeImage() {
     <div class="label">AI 图片描述</div>
     <div style="text-align:center">
       <div class="loading-spinner"></div>
-      <div class="loading">AI (${selectedModel}) 正在仔细观察这张图片…</div>
+      <div class="loading">AI (${modelsMap[selectedModelId] || selectedModelId}) 正在仔细观察这张图片…</div>
     </div>
   `;
 
@@ -377,7 +384,7 @@ async function describeImage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: selectedModel,
+        model: selectedModelId,
         prompt: '请用中文详细描述这张图片中的内容。包括：1. 图片中有什么主要物体或人物；2. 场景和环境；3. 颜色和氛围。请用自然流畅的中文描述，大约100-200字。',
         images: [uploadedImageBase64],
         stream: false
@@ -394,7 +401,7 @@ async function describeImage() {
 
     descResult.className = 'desc-result has-result';
     descResult.innerHTML = `
-      <div class="label">AI 图片描述 (${selectedModel})</div>
+      <div class="label">AI 图片描述 (${modelsMap[selectedModelId] || selectedModelId})</div>
       <div class="desc-text">${description}</div>
     `;
   } catch (error) {
