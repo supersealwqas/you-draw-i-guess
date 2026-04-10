@@ -14,12 +14,13 @@ const QWEN_BASE_URL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.c
 // Backend model configuration with display names
 const MODELS_CONFIG = {
     ollama: [
-        { id: 'gemma3', name: 'Gemma 3 (本地)' },
-        { id: 'qwen3.5', name: '千问 3.5 (本地)' }
+        { id: 'gemma3', name: 'Gemma3 (本地)' },
+        { id: 'qwen3.5', name: '千问3.5 (本地)' }
     ],
     cloud: [
-        { id: 'qwen3.5-flash', name: '千问 3.5 极速版' },
-        { id: 'qwen3.5-plus', name: '千问 3.5 Plus 版' }
+        { id: 'qwen3.5-flash', name: '千问3.5极速版' },
+        { id: 'qwen3.5-plus', name: '千问3.5Plus版' },
+        { id: 'qwen3.6-plus-2026-04-02', name: '千问3.6无敌牛逼的Plus版' }
     ]
 };
 

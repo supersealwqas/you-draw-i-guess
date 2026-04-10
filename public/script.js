@@ -63,6 +63,7 @@ const guessCountEl = document.getElementById('guessCount');
 const statusText = document.getElementById('statusText');
 const historySection = document.getElementById('historySection');
 const historyList = document.getElementById('historyList');
+const saveBtn = document.getElementById('saveBtn');
 
 let isDrawing = false;
 let currentColor = '#1e1e1e';
@@ -154,6 +155,27 @@ document.querySelectorAll('.color-btn').forEach(btn => {
   });
 });
 
+// ========== Custom Color Picker ==========
+const colorPicker = document.getElementById('colorPicker');
+const colorPickerWrapper = colorPicker.parentElement;
+
+colorPicker.addEventListener('input', (e) => {
+  currentColor = e.target.value;
+  isEraser = false;
+  eraserBtn.classList.remove('active');
+  
+  // Update UI: Deactivate all preset buttons, activate picker wrapper
+  document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+  colorPickerWrapper.classList.add('active');
+});
+
+// Sync preset buttons with picker wrapper
+document.querySelectorAll('.color-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    colorPickerWrapper.classList.remove('active');
+  });
+});
+
 // ========== Size Slider ==========
 sizeSlider.addEventListener('input', () => {
   brushSize = parseInt(sizeSlider.value);
@@ -192,6 +214,23 @@ clearBtn.addEventListener('click', () => {
   ctx.fillStyle = 'white';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   saveState();
+});
+
+// ========== Save ==========
+saveBtn.addEventListener('click', () => {
+  // We use toDataURL synchronously instead of toBlob.
+  // Using an async callback like toBlob loses the trusted user-interaction context (the click event token),
+  // which causes strict browsers to silently block the download as a "popup".
+  const dataURL = canvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  
+  link.download = `ai-vision-drawing-${Date.now()}.png`;
+  link.href = dataURL;
+  
+  // Attach to body for browser compatibility, click, then remove
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 });
 
 // ========== Ripple Effect ==========
@@ -325,8 +364,15 @@ function handleImageFile(file) {
     uploadZone.innerHTML = `
       <img src="${e.target.result}" class="upload-preview" alt="预览">
       <div class="upload-actions">
-        <button class="btn btn-reupload" id="reuploadBtn">🔄 重新选择</button>
-        <button class="btn btn-describe" id="describeBtn">🔍 让 AI 描述</button>
+        <div class="upload-actions-row">
+          <button class="btn btn-reupload" id="reuploadBtn">🔄 重新选择</button>
+          <button class="btn btn-describe btn-large" id="describeBtnDefault">✨ 一键生成描述</button>
+        </div>
+        <button class="btn btn-secondary" id="moreBtn">💬 我想知道更多...</button>
+      </div>
+      <div class="more-prompt-panel" id="morePromptPanel">
+        <textarea id="customPromptInput" placeholder="输入你想问的具体问题，例如：提取文字、算数学题或分析细节..."></textarea>
+        <button class="btn btn-send-custom" id="sendCustomBtn">🚀 发送自定义指令</button>
       </div>
     `;
     // Bind buttons
@@ -334,9 +380,28 @@ function handleImageFile(file) {
       ev.stopPropagation();
       resetUpload();
     });
-    document.getElementById('describeBtn').addEventListener('click', (ev) => {
+    document.getElementById('describeBtnDefault').addEventListener('click', (ev) => {
       ev.stopPropagation();
-      describeImage();
+      const defaultPrompt = '请用中文详细描述这张图片中的内容。包括：1. 图片中有什么主要物体或人物；2. 场景和环境；3. 颜色和氛围。请用自然流畅的中文描述，大约100-200字。';
+      describeImage(defaultPrompt);
+    });
+    
+    // Toggle more panel
+    const morePanel = document.getElementById('morePromptPanel');
+    document.getElementById('moreBtn').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      morePanel.classList.toggle('active');
+    });
+
+    // Custom prompt send
+    document.getElementById('sendCustomBtn').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const customVal = document.getElementById('customPromptInput').value.trim();
+      if (!customVal) {
+        alert("请输入自定义指令");
+        return;
+      }
+      describeImage(customVal);
     });
     // Reset desc result
     descResult.className = 'desc-result';
@@ -364,11 +429,13 @@ function resetUpload() {
   `;
 }
 
-async function describeImage() {
+async function describeImage(userPrompt) {
   if (!uploadedImageBase64) return;
 
-  const descBtn = document.getElementById('describeBtn');
+  const descBtn = document.getElementById('describeBtnDefault');
   if (descBtn) descBtn.disabled = true;
+  const customBtn = document.getElementById('sendCustomBtn');
+  if (customBtn) customBtn.disabled = true;
 
   descResult.className = 'desc-result';
   descResult.innerHTML = `
@@ -385,7 +452,7 @@ async function describeImage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: selectedModelId,
-        prompt: '请用中文详细描述这张图片中的内容。包括：1. 图片中有什么主要物体或人物；2. 场景和环境；3. 颜色和氛围。请用自然流畅的中文描述，大约100-200字。',
+        prompt: userPrompt,
         images: [uploadedImageBase64],
         stream: false
       })
@@ -401,16 +468,19 @@ async function describeImage() {
 
     descResult.className = 'desc-result has-result';
     descResult.innerHTML = `
-      <div class="label">AI 图片描述 (${modelsMap[selectedModelId] || selectedModelId})</div>
-      <div class="desc-text">${description}</div>
+      <div class="label">AI 识别结果</div>
+      <div class="desc-text">${description.replace(/\n/g, '<br>')}</div>
     `;
+
   } catch (error) {
+    console.error('Describe Error:', error);
     descResult.className = 'desc-result';
     descResult.innerHTML = `
-      <div class="label">出错了</div>
-      <div class="desc-text" style="color: #f87171; text-align: center;">${error.message}</div>
+      <div class="label" style="color:#ef4444">识别失败</div>
+      <div class="desc-text" style="color:#ef4444">${error.message}</div>
     `;
   } finally {
     if (descBtn) descBtn.disabled = false;
+    if (customBtn) customBtn.disabled = false;
   }
 }

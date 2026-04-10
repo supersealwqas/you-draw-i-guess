@@ -56,7 +56,16 @@
         <div class="color-btn" style="background:#3b82f6" data-color="#3b82f6" data-tip="蓝色"></div>
         <div class="color-btn" style="background:#22c55e" data-color="#22c55e" data-tip="绿色"></div>
         <div class="color-btn" style="background:#f59e0b" data-color="#f59e0b" data-tip="橙色"></div>
+        <div class="color-btn" style="background:#ffff00" data-color="#ffff00" data-tip="黄色"></div>
         <div class="color-btn" style="background:#a855f7" data-color="#a855f7" data-tip="紫色"></div>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Custom Color Picker -->
+        <div class="color-picker-wrapper" data-tip="自定义颜色">
+          <input type="color" id="colorPicker" value="#1e1e1e">
+          <div class="custom-color-btn" id="customColorBtn">🎨</div>
+        </div>
 
         <div class="toolbar-divider"></div>
 
@@ -71,6 +80,7 @@
         <button class="btn btn-eraser" id="eraserBtn" data-tip="橡皮擦">🧹 橡皮</button>
         <button class="btn btn-undo" id="undoBtn" data-tip="撤销上一步">↩ 撤销</button>
         <button class="btn btn-clear" id="clearBtn" data-tip="清空画布">🗑 清空</button>
+        <button class="btn btn-save" id="saveBtn" data-tip="保存画作">💾 保存</button>
 
         <button class="btn btn-guess" id="guessBtn">✨ 让 AI 猜</button>
       </div>
@@ -99,7 +109,7 @@
         <div class="upload-text">拖拽图片到这里，或 <strong>点击选择文件</strong></div>
         <div class="upload-hint">支持 JPG / PNG / GIF / WebP</div>
       </div>
-
+      
       <div class="desc-result" id="descResult">
         <div class="label">AI 图片描述</div>
         <div class="desc-text-placeholder">上传一张图片，让 AI 告诉你图片里有什么</div>
