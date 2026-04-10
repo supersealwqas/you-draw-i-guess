@@ -436,6 +436,8 @@ async function describeImage(userPrompt) {
   if (descBtn) descBtn.disabled = true;
   const customBtn = document.getElementById('sendCustomBtn');
   if (customBtn) customBtn.disabled = true;
+  const moreBtn = document.getElementById('moreBtn');
+  if (moreBtn) moreBtn.disabled = true;
 
   descResult.className = 'desc-result';
   descResult.innerHTML = `
@@ -454,7 +456,7 @@ async function describeImage(userPrompt) {
         model: selectedModelId,
         prompt: userPrompt,
         images: [uploadedImageBase64],
-        stream: false
+        stream: true
       })
     });
 
@@ -463,14 +465,149 @@ async function describeImage(userPrompt) {
       throw new Error(errData.details || `API Error: ${response.status}`);
     }
 
-    const data = await response.json();
-    const description = data.response.trim();
-
     descResult.className = 'desc-result has-result';
     descResult.innerHTML = `
       <div class="label">AI 识别结果</div>
-      <div class="desc-text">${description.replace(/\n/g, '<br>')}</div>
+      <div class="desc-text markdown-body" id="descTextContainer"><span class="streaming-cursor"></span></div>
     `;
+    const textContainer = document.getElementById('descTextContainer');
+    
+    // Parse stream chunks
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let thinkingContent = "";
+    let normalContent = "";
+    let rawBuffer = "";
+    let streamBuffer = "";
+    let renderPending = false;
+    let lastRenderTime = 0;
+    const RENDER_INTERVAL = 80;
+
+    const doRender = (isFinal = false) => {
+      renderPending = false;
+      const detailsEl = textContainer.querySelector('details.think-box');
+      const wasManuallyToggled = detailsEl ? detailsEl.dataset.userToggled === 'true' : false;
+      const prevOpen = detailsEl ? detailsEl.open : false;
+      const cursorHtml = '<span class="streaming-cursor"></span>';
+
+      let html = "";
+      if (thinkingContent) {
+        const thinkMd = isFinal || normalContent
+          ? thinkingContent
+          : thinkingContent + cursorHtml;
+        html += `<details class="think-box"><summary>\u{1F9E0} AI \u6DF1\u5EA6\u601D\u8003</summary><div class="think-content markdown-body">${DOMPurify.sanitize(marked.parse(thinkMd))}</div></details>`;
+      }
+      if (normalContent) {
+        const normalMd = isFinal
+          ? normalContent
+          : normalContent + cursorHtml;
+        html += `<div class="normal-content markdown-body">${DOMPurify.sanitize(marked.parse(normalMd))}</div>`;
+      }
+      textContainer.innerHTML = html;
+
+      const newDetails = textContainer.querySelector('details.think-box');
+      if (newDetails) {
+        if (wasManuallyToggled) {
+          newDetails.open = prevOpen;
+        } else {
+          newDetails.open = !normalContent;
+        }
+        newDetails.dataset.userToggled = wasManuallyToggled ? 'true' : 'false';
+        newDetails.querySelector('summary').addEventListener('click', () => {
+          newDetails.dataset.userToggled = 'true';
+        }, { once: true });
+      }
+      textContainer.querySelectorAll('pre code:not(.hljs)').forEach(b => hljs.highlightElement(b));
+      
+      // Auto-scroll think-content to bottom so latest text is visible
+      const thinkEl = textContainer.querySelector('.think-content');
+      if (thinkEl && !isFinal) {
+        thinkEl.scrollTop = thinkEl.scrollHeight;
+      }
+    };
+    let renderTimerId = null;
+
+    const scheduleRender = () => {
+      if (renderPending) return;
+      const now = Date.now();
+      const elapsed = now - lastRenderTime;
+      if (elapsed >= RENDER_INTERVAL) {
+        lastRenderTime = now;
+        doRender();
+      } else {
+        renderPending = true;
+        renderTimerId = setTimeout(() => { lastRenderTime = Date.now(); doRender(); }, RENDER_INTERVAL - elapsed);
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      streamBuffer += decoder.decode(value, { stream: true });
+      
+      const lines = streamBuffer.split('\n');
+      streamBuffer = lines.pop();
+      
+      for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+        
+        // 1. Ollama NDJSON
+        if (line.startsWith('{') && line.endsWith('}')) {
+          try {
+            const data = JSON.parse(line);
+            // Ollama native thinking field
+            if (data.thinking) thinkingContent += data.thinking;
+            if (data.message && data.message.thinking) thinkingContent += data.message.thinking;
+            // Normal content (may include <think> tags for older Ollama)
+            const token = data.response || (data.message && data.message.content) || "";
+            if (token) {
+              rawBuffer += token;
+              if (rawBuffer.includes('<think>')) {
+                let t = "", n = "", inside = false, remaining = rawBuffer;
+                while (remaining.length > 0) {
+                  if (!inside) {
+                    const idx = remaining.indexOf('<think>');
+                    if (idx === -1) { n += remaining; break; }
+                    n += remaining.slice(0, idx);
+                    remaining = remaining.slice(idx + 7);
+                    inside = true;
+                  } else {
+                    const idx = remaining.indexOf('</think>');
+                    if (idx === -1) { t += remaining; break; }
+                    t += remaining.slice(0, idx);
+                    remaining = remaining.slice(idx + 8);
+                    inside = false;
+                  }
+                }
+                thinkingContent = t;
+                normalContent = n;
+              } else {
+                normalContent = rawBuffer;
+              }
+            }
+          } catch(e) {}
+        }
+        // 2. Qwen SSE
+        else if (line.startsWith('data: ')) {
+          if (line.includes('[DONE]')) continue;
+          try {
+            const data = JSON.parse(line.substring(6));
+            if (data.choices?.[0]?.delta) {
+              const delta = data.choices[0].delta;
+              if (delta.reasoning_content) thinkingContent += delta.reasoning_content;
+              if (delta.content) normalContent += delta.content;
+            }
+          } catch(e) {}
+        }
+      }
+      
+      scheduleRender();
+    }
+    
+    // Cancel any pending throttled render, then do final clean render (no cursor)
+    if (renderTimerId) clearTimeout(renderTimerId);
+    doRender(true);
 
   } catch (error) {
     console.error('Describe Error:', error);
@@ -482,5 +619,6 @@ async function describeImage(userPrompt) {
   } finally {
     if (descBtn) descBtn.disabled = false;
     if (customBtn) customBtn.disabled = false;
+    if (moreBtn) moreBtn.disabled = false;
   }
 }

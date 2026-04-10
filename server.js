@@ -78,23 +78,35 @@ async function handleAIRequest(req, res) {
                 });
             }
 
-            const response = await axios.post(`${QWEN_BASE_URL}/chat/completions`, {
+            const payload = {
                 model: model,
                 messages: [{
                     role: 'user',
                     content: content
                 }]
-            }, {
+            };
+            if (stream) {
+                payload.stream = true;
+            }
+
+            const response = await axios.post(`${QWEN_BASE_URL}/chat/completions`, payload, {
                 headers: {
                     'Authorization': `Bearer ${QWEN_API_KEY}`,
                     'Content-Type': 'application/json'
                 },
-                timeout: 60000
+                timeout: 120000,
+                responseType: stream ? 'stream' : 'json'
             });
 
-            // Normalize response to match frontend expectations
-            const reply = response.data.choices[0].message.content;
-            res.json({ response: reply });
+            if (stream) {
+                res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.setHeader('Connection', 'keep-alive');
+                response.data.pipe(res);
+            } else {
+                const reply = response.data.choices[0].message.content;
+                res.json({ response: reply });
+            }
 
         } else {
             // ===== Ollama Local API =====
@@ -103,9 +115,19 @@ async function handleAIRequest(req, res) {
                 prompt,
                 images,
                 stream: stream || false
-            }, { timeout: 120000 });
+            }, { 
+                timeout: 120000,
+                responseType: stream ? 'stream' : 'json'
+            });
 
-            res.json(response.data);
+            if (stream) {
+                res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.setHeader('Connection', 'keep-alive');
+                response.data.pipe(res);
+            } else {
+                res.json(response.data);
+            }
         }
     } catch (error) {
         console.error(`[${model}] AI Error:`, error.message);
